@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% set editing = item and item.id %}
+
+{% block actions %}
+<a class="btn btn-secondary" href="{{ '/items/' ~ item.id if editing else '/items' }}">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<div class="form-layout">
+  <section class="panel">
+    <header class="panel-head">
+      <div>
+        <h2>{{ 'Edit item details' if editing else 'New catalogue item' }}</h2>
+        <p>{{ 'Update how this item is named, counted and reordered.' if editing else 'Set up an item before receiving or issuing it.' }}</p>
+      </div>
+    </header>
+
+    <form method="post" action="{{ '/items/' ~ item.id ~ '/edit' if editing else '/items/new' }}" class="form-body">
+      <div class="field">
+        <label for="name">Item name <span class="required">*</span></label>
+        <input id="name" name="name" type="text" value="{{ values.name }}" maxlength="100" required autofocus placeholder="e.g. 48-Core ADSS Fibre Cable">
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="category">Category</label>
+          <input id="category" name="category" type="text" value="{{ values.category }}" maxlength="50" placeholder="e.g. Fibre Cable">
+          <p class="hint">Defaults to “General” when left blank.</p>
+        </div>
+        <div class="field">
+          <label for="unit">Unit</label>
+          <input id="unit" name="unit" type="text" value="{{ values.unit }}" maxlength="30" placeholder="e.g. drum, pcs, pack">
+          <p class="hint">How the quantity is counted.</p>
+        </div>
+      </div>
+
+      {% if editing %}
+      <div class="form-grid">
+        <div class="field">
+          <label>Current stock</label>
+          <div class="readonly-value">
+            <strong>{{ item.current_stock|num }}</strong>
+            <span>{{ item.unit }}</span>
+          </div>
+          <p class="hint">Use a stock adjustment on the item page to change this.</p>
+        </div>
+        <div class="field">
+          <label for="reorder_level">Reorder level</label>
+          <input id="reorder_level" name="reorder_level" type="number" value="{{ values.reorder_level }}" min="0" step="1" required>
+          <p class="hint">Warn when stock falls to this quantity.</p>
+        </div>
+      </div>
+      {% else %}
+      <div class="form-grid">
+        <div class="field">
+          <label for="opening_stock">Opening stock</label>
+          <input id="opening_stock" name="opening_stock" type="number" value="{{ values.opening_stock }}" min="0" step="1" required>
+          <p class="hint">Recorded as an opening-balance delivery.</p>
+        </div>
+        <div class="field">
+          <label for="reorder_level">Reorder level</label>
+          <input id="reorder_level" name="reorder_level" type="number" value="{{ values.reorder_level }}" min="0" step="1" required>
+          <p class="hint">Warn when stock falls to this quantity.</p>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="tracking-box">
+        <p class="tracking-title">Optional tracking</p>
+        <div class="form-grid">
+          <div class="field">
+            <label for="metres_per_drum">Metres per drum</label>
+            <input id="metres_per_drum" name="metres_per_drum" type="number" value="{{ values.metres_per_drum or 0 }}" min="0" step="1" required>
+            <p class="hint">For cable counted in whole drums. Used to estimate metres on hand; actual metres can be entered on each receipt or issue.</p>
+          </div>
+          <div class="field">
+            <label class="check-row" for="tracks_serial">
+              <input id="tracks_serial" name="tracks_serial" type="checkbox" value="1" {{ 'checked' if values.tracks_serial }}>
+              <span>
+                <strong>Track serial numbers</strong>
+                <small>Shows optional serial fields when receiving or issuing. Leave blank when serials are too many to record.</small>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn-secondary" href="{{ '/items/' ~ item.id if editing else '/items' }}">Cancel</a>
+        <button class="btn btn-primary" type="submit">{{ 'Save changes' if editing else 'Add item' }}</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="form-aside">
+    <section class="panel panel-tinted">
+      <h2 class="aside-title">How stock moves</h2>
+      <ul class="tip-list">
+        <li>
+          <span class="tip-dot tip-dot-green"></span>
+          <div><strong>Receive stock</strong><p>Adds to the quantity on hand.</p></div>
+        </li>
+        <li>
+          <span class="tip-dot tip-dot-blue"></span>
+          <div><strong>Issue stock</strong><p>Deducts what a person takes out.</p></div>
+        </li>
+        <li>
+          <span class="tip-dot tip-dot-plum"></span>
+          <div><strong>Record a return</strong><p>Puts returned quantities back.</p></div>
+        </li>
+        <li>
+          <span class="tip-dot tip-dot-amber"></span>
+          <div><strong>Adjust stock</strong><p>Corrects counts with a written reason.</p></div>
+        </li>
+      </ul>
+    </section>
+    <section class="panel panel-note">
+      <h2 class="aside-title">Cable &amp; serials</h2>
+      <p class="aside-copy">Cable is counted in <strong>whole drums</strong>, so quantities stay simple. Add a typical metres-per-drum value for an approximate length on hand, and record the real metres on receipts or issues when drum lengths differ.</p>
+    </section>
+    <section class="panel panel-note">
+      <h2 class="aside-title">Low-stock rule</h2>
+      <p class="aside-copy">An item is flagged as low stock when its on-hand quantity is at or below the reorder level. Set the reorder level to the point where you would normally restock.</p>
+    </section>
+  </aside>
+</div>
+{% endblock %}

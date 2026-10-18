@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block actions %}
+<a class="btn btn-primary" href="/issues/new">Issue stock</a>
+{% endblock %}
+
+{% block content %}
+<section class="stats-grid stats-grid-small" aria-label="Returns summary">
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11a4.5 4.5 0 0 1 0 9H9"/><path d="m7.5 5.5-3.5 3.5 3.5 3.5"/></svg>
+      </span>
+    </div>
+    <p class="stat-label">Open issues</p>
+    <p class="stat-value">{{ stats.open|num }}</p>
+    <p class="stat-meta">Waiting for returns</p>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14V3"/><path d="M7.5 7.5 12 3l4.5 4.5"/><path d="M4 16.5v2A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-2"/></svg>
+      </span>
+    </div>
+    <p class="stat-label">Units still out</p>
+    <p class="stat-value">{{ stats.units|num }}</p>
+    <p class="stat-meta">Across all open issues</p>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-plum">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.2 2.5-5 5.5-5s5.5 1.8 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.8"/><path d="M17.5 14.6c1.9.5 3 2.1 3 4.1"/></svg>
+      </span>
+    </div>
+    <p class="stat-label">People with items</p>
+    <p class="stat-value">{{ stats.people|num }}</p>
+    <p class="stat-meta">Everyone currently holding stock</p>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+      </span>
+    </div>
+    <p class="stat-label">Closed issues</p>
+    <p class="stat-value">{{ stats.closed|num }}</p>
+    <p class="stat-meta">Returned in full</p>
+  </article>
+</section>
+
+<section class="panel">
+  <header class="panel-head panel-head-wrap">
+    <div>
+      <h2>Past issues</h2>
+      <p>Pick an issue to mark returned quantities</p>
+    </div>
+    <div class="segmented" aria-label="Filter issues">
+      <a href="/returns" class="{{ 'is-active' if scope != 'all' }}">Open</a>
+      <a href="/returns?scope=all" class="{{ 'is-active' if scope == 'all' }}">All issues</a>
+    </div>
+  </header>
+
+  {% if issues %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Issue</th>
+          <th>Issued to</th>
+          <th>Date</th>
+          <th>Still outstanding</th>
+          <th class="num">Units out</th>
+          <th class="actions">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for issue in issues %}
+        <tr>
+          <td><a class="issue-link" href="/issues/{{ issue.id }}">#{{ issue.id }}</a></td>
+          <td>
+            <span class="person-cell">
+              <span class="avatar avatar-sm">{{ issue.person|initials }}</span>
+              <span>{{ issue.person }}</span>
+            </span>
+          </td>
+          <td class="nowrap muted">{{ issue.date|datefmt }}</td>
+          <td class="muted">
+            {% if issue.outstanding_summary %}
+              {{ issue.outstanding_summary }}
+            {% else %}
+              <span class="muted">All returned</span>
+            {% endif %}
+          </td>
+          <td class="num">
+            {% if issue.outstanding %}
+              <strong class="delta-down">{{ issue.outstanding|num }}</strong>
+            {% else %}
+              <span class="badge badge-good">0</span>
+            {% endif %}
+          </td>
+          <td class="actions">
+            {% if issue.outstanding %}
+            <a class="btn btn-tiny btn-primary" href="/issues/{{ issue.id }}">Record return</a>
+            {% else %}
+            <a class="btn btn-tiny btn-ghost" href="/issues/{{ issue.id }}">View</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <span class="empty-icon empty-icon-good" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+    </span>
+    {% if scope == 'all' %}
+    <h3>No issues recorded</h3>
+    <p>Issues will appear here once you check stock out to someone.</p>
+    {% else %}
+    <h3>Nothing is outstanding</h3>
+    <p>Every issued item has been returned. Nice work.</p>
+    {% endif %}
+    <a class="btn btn-primary" href="/issues/new">Issue stock</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

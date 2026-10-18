@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block actions %}
+<a class="btn btn-secondary" href="/returns">All returns</a>
+{% if issue.person_active %}<a class="btn btn-primary" href="/issues/new?person={{ issue.issued_to_id }}">Issue to {{ issue.person }}</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="detail-layout">
+  <section class="panel">
+    <header class="panel-head">
+      <div>
+        <h2>Items on this issue</h2>
+        <p>Mark quantities as they come back to stock</p>
+      </div>
+      {% if complete %}
+      <span class="badge badge-good"><span class="dot"></span>Fully returned</span>
+      {% else %}
+      <span class="badge badge-warn"><span class="dot"></span>{{ totals.outstanding|num }} unit{{ '' if totals.outstanding == 1 else 's' }} out</span>
+      {% endif %}
+    </header>
+
+    <div class="issue-summary">
+      <div><span>Issued</span><strong>{{ totals.issued|num }}</strong></div>
+      <div><span>Returned</span><strong>{{ totals.returned|num }}</strong></div>
+      <div><span>Still out</span><strong>{{ totals.outstanding|num }}</strong></div>
+    </div>
+
+    {% if complete %}
+    <div class="empty empty-compact empty-success">
+      <span class="empty-icon empty-icon-good" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+      </span>
+      <h3>Everything is back</h3>
+      <p>All quantities from issue #{{ issue.id }} have been returned to stock.</p>
+    </div>
+    {% else %}
+    <form method="post" action="/issues/{{ issue.id }}/return">
+      <div class="table-wrap">
+        <table class="data-table return-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th class="num">Issued</th>
+              <th class="num">Returned</th>
+              <th class="num">Outstanding</th>
+              <th class="return-col">Return now</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for line in lines %}
+            <tr class="{{ 'row-complete' if line.outstanding == 0 }}">
+              <td class="cell-item">
+                <a href="/items/{{ line.item_id }}">{{ line.item_name }}</a>
+                <span class="cell-sub">{{ line.unit }}{% if line.metres %} · {{ line.metres|num }} m{% endif %}</span>
+                {% if line.serial_numbers %}<span class="cell-sub serial-note">SN: {{ line.serial_numbers }}</span>{% endif %}
+              </td>
+              <td class="num">{{ line.quantity_issued|num }}</td>
+              <td class="num">
+                {{ line.quantity_returned|num }}
+                {% if line.returned_at %}<span class="cell-sub">{{ line.returned_at|datefmt }}</span>{% endif %}
+              </td>
+              <td class="num"><strong>{{ line.outstanding|num }}</strong></td>
+              <td class="return-col">
+                {% if line.outstanding > 0 %}
+                <div class="return-input">
+                  <input id="return-{{ line.id }}" type="number" name="return_{{ line.id }}" min="0" max="{{ line.outstanding }}" step="1" value="0" inputmode="numeric" aria-label="Quantity of {{ line.item_name }} to return">
+                  <button type="button" class="btn btn-tiny btn-ghost fill-return" data-target="return-{{ line.id }}" data-max="{{ line.outstanding }}">All</button>
+                </div>
+                {% else %}
+                <span class="badge badge-good">Returned</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="return-footer">
+        <div class="field field-inline">
+          <label for="return-date">Return date</label>
+          <input id="return-date" name="date" type="date" value="{{ today }}" required>
+        </div>
+        <button class="btn btn-primary" type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11a4.5 4.5 0 0 1 0 9H9"/><path d="m7.5 5.5-3.5 3.5 3.5 3.5"/></svg>
+          Record returns
+        </button>
+      </div>
+    </form>
+    {% endif %}
+  </section>
+
+  <aside class="detail-side">
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h2>Issued to</h2>
+          <p>Person and issue details</p>
+        </div>
+      </header>
+      <div class="person-header">
+        <span class="avatar avatar-lg">{{ issue.person|initials }}</span>
+        <div>
+          <p class="person-name">{{ issue.person }}</p>
+          <p class="person-phone">{{ issue.phone or 'No phone number' }}</p>
+        </div>
+      </div>
+      <dl class="detail-list">
+        <div><dt>Issue</dt><dd>#{{ issue.id }}</dd></div>
+        <div><dt>Issue date</dt><dd>{{ issue.date|datefmt }}</dd></div>
+        <div><dt>Line items</dt><dd>{{ lines|length }}</dd></div>
+        <div><dt>Status</dt><dd>{{ 'Returned in full' if complete else 'Open' }}</dd></div>
+      </dl>
+      <div class="aside-actions">
+        <a class="btn btn-secondary btn-block" href="/people#person-{{ issue.issued_to_id }}">View person</a>
+      </div>
+    </section>
+
+    <section class="panel panel-tinted">
+      <h2 class="aside-title">Returning stock</h2>
+      <p class="aside-copy">Enter the quantity received back for any line, then record the return. Stock is added back immediately and the issue stays open until every unit is returned.</p>
+    </section>
+  </aside>
+</div>
+{% endblock %}

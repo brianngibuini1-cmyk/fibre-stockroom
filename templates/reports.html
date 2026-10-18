@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% from "_macros.html" import direction_badge %}
+
+{% block actions %}
+<button class="btn btn-secondary" type="button" onclick="window.print()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V4h10v5"/><path d="M7 17H5.5A1.5 1.5 0 0 1 4 15.5v-5A1.5 1.5 0 0 1 5.5 9h13a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5H17"/><path d="M7 13h10v7H7z"/></svg>
+  Print
+</button>
+{% endblock %}
+
+{% block content %}
+<section class="stats-grid stats-grid-small" aria-label="Period summary">
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11"/><path d="m7.5 9.5 4.5 4.5 4.5-4.5"/><path d="M4 16.5v2A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-2"/></svg>
+      </span>
+    </div>
+    <p class="stat-label">Stock in</p>
+    <p class="stat-value">{{ summary.stock_in|num }}</p>
+    <p class="stat-meta">Units received</p>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14V3"/><path d="M7.5 7.5 12 3l4.5 4.5"/><path d="M4 16.5v2A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-2"/></svg>
+      </span>
+    </div>
+    <p class="stat-label">Stock out</p>
+    <p class="stat-value">{{ summary.stock_out|num }}</p>
+    <p class="stat-meta">Units issued</p>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-plum">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11a4.5 4.5 0 0 1 0 9H9"/><path d="m7.5 5.5-3.5 3.5 3.5 3.5"/></svg>
+      </span>
+    </div>
+    <p class="stat-label">Returns</p>
+    <p class="stat-value">{{ summary.returns|num }}</p>
+    <p class="stat-meta">Units added back</p>
+  </article>
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10"/><path d="M18 7h2"/><circle cx="16" cy="7" r="2"/><path d="M4 17h2"/><path d="M10 17h10"/><circle cx="8" cy="17" r="2"/></svg>
+      </span>
+    </div>
+    <p class="stat-label">Adjustments</p>
+    <p class="stat-value">{{ summary.adjustments|signed }}</p>
+    <p class="stat-meta">Manual count corrections</p>
+  </article>
+</section>
+
+<section class="panel report-filter-panel">
+  <form class="report-filter" method="get" action="/reports">
+    <div class="filter-copy">
+      <h2>Report period</h2>
+      <p>{{ start|datefmt }} &ndash; {{ end|datefmt }}</p>
+    </div>
+    <label class="date-field">
+      <span>From</span>
+      <input type="date" name="start" value="{{ start }}">
+    </label>
+    <label class="date-field">
+      <span>To</span>
+      <input type="date" name="end" value="{{ end }}">
+    </label>
+    <button class="btn btn-primary" type="submit">Apply</button>
+    <a class="text-link" href="/reports">Reset</a>
+  </form>
+</section>
+
+<section class="panel">
+  <header class="panel-head">
+    <div>
+      <h2>Stock movements</h2>
+      <p>{{ movements|length }} movement{{ '' if movements|length == 1 else 's' }} in this period</p>
+    </div>
+    <span class="net-pill">Net stock movement <strong>{{ summary.net|signed }}</strong></span>
+  </header>
+
+  {% if movements %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Item</th>
+          <th class="num">Change</th>
+          <th>Reference</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for movement in movements %}
+        <tr>
+          <td class="nowrap">{{ movement.date|datefmt }}</td>
+          <td>{{ direction_badge(movement.kind) }}</td>
+          <td><a href="/items/{{ movement.item_id }}">{{ movement.item }}</a></td>
+          <td class="num delta {{ 'delta-up' if movement.qty > 0 else 'delta-down' }}">{{ movement.qty|signed }}</td>
+          <td class="muted">{{ movement.reference }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <p>No stock movement in this period. Try widening the date range.</p>
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <header class="panel-head">
+    <div>
+      <h2>Issuance by person</h2>
+      <p>Issues dated {{ start|datefmt }} to {{ end|datefmt }}</p>
+    </div>
+  </header>
+
+  {% if per_person %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Person</th>
+          <th class="num">Issues</th>
+          <th class="num">Units issued</th>
+          <th class="num">Returned</th>
+          <th class="num">Still out</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for person in per_person %}
+        <tr>
+          <td>
+            <span class="person-cell">
+              <span class="avatar avatar-sm">{{ person.name|initials }}</span>
+              <span>{{ person.name }}</span>
+            </span>
+          </td>
+          <td class="num">{{ person.issue_count|num }}</td>
+          <td class="num"><strong>{{ person.issued|num }}</strong></td>
+          <td class="num muted">{{ person.returned|num }}</td>
+          <td class="num">
+            {% if person.outstanding %}
+              <span class="badge badge-warn">{{ person.outstanding|num }} out</span>
+            {% else %}
+              <span class="badge badge-good">0</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>Total</td>
+          <td class="num">{{ per_person|sum(attribute='issue_count')|num }}</td>
+          <td class="num">{{ per_person|sum(attribute='issued')|num }}</td>
+          <td class="num">{{ per_person|sum(attribute='returned')|num }}</td>
+          <td class="num">{{ per_person|sum(attribute='outstanding')|num }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty empty-compact">
+    <p>No issues were recorded for this period.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

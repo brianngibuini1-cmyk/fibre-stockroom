@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stock_badge, direction_badge %}
+
+{% block actions %}
+<a class="btn btn-secondary" href="/items">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>
+  Items
+</a>
+<a class="btn btn-secondary" href="/items/{{ item.id }}/edit">Edit</a>
+<a class="btn btn-primary" href="/stock-in?item={{ item.id }}">Receive stock</a>
+{% endblock %}
+
+{% block content %}
+<section class="mini-stats" aria-label="Item summary">
+  <article class="mini-stat">
+    <p class="mini-label">On hand</p>
+    <p class="mini-value">{{ item.current_stock|num }} <span>{{ item.current_stock|unit_name(item.unit) }}</span></p>
+    <div class="stock-meter" aria-hidden="true">
+      <span class="meter-fill {{ 'meter-out' if item.current_stock <= 0 else ('meter-low' if item.current_stock <= item.reorder_level else '') }}" style="width: {{ item.stock_pct }}%"></span>
+    </div>
+    {% if item.metres_per_drum %}<p class="mini-meta">≈ {{ item.metres_on_hand|num }} m at {{ item.metres_per_drum|num }} m/drum</p>{% endif %}
+  </article>
+  <article class="mini-stat">
+    <p class="mini-label">Status</p>
+    <p class="mini-value mini-value-badge">{{ stock_badge(item) }}</p>
+    <p class="mini-meta">Reorder at {{ item.reorder_level|num }} {{ item.reorder_level|unit_name(item.unit) }}</p>
+  </article>
+  <article class="mini-stat">
+    <p class="mini-label">Out with people</p>
+    <p class="mini-value">{{ totals.outstanding|num }} <span>{{ totals.outstanding|unit_name(item.unit) }}</span></p>
+    <p class="mini-meta">Across all open issues</p>
+  </article>
+  <article class="mini-stat">
+    <p class="mini-label">Total received</p>
+    <p class="mini-value">{{ totals.received|num }} <span>{{ totals.received|unit_name(item.unit) }}</span></p>
+    <p class="mini-meta">{{ totals.returned|num }} returned in total</p>
+  </article>
+</section>
+
+<div class="detail-layout">
+  <section class="panel">
+    <header class="panel-head">
+      <div>
+        <h2>Stock history</h2>
+        <p>Every movement for {{ item.name }}, newest first</p>
+      </div>
+      <span class="badge badge-neutral">{{ history|length }} movement{{ '' if history|length == 1 else 's' }}</span>
+    </header>
+
+    {% if history %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Movement</th>
+            <th>Detail</th>
+            <th class="num">Change</th>
+            <th class="num">Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for movement in history %}
+          <tr>
+            <td class="nowrap">{{ movement.date|datefmt }}</td>
+            <td>{{ direction_badge(movement.kind) }}</td>
+            <td class="muted">
+              {{ movement.detail }}
+              {% if movement.metres %}<span class="cell-sub">{{ movement.metres|num }} m</span>{% endif %}
+              {% if movement.serial_numbers %}<span class="cell-sub">SN: {{ movement.serial_numbers }}</span>{% endif %}
+            </td>
+            <td class="num delta {{ 'delta-up' if movement.delta > 0 else 'delta-down' }}">{{ movement.delta|signed }}</td>
+            <td class="num"><strong>{{ movement.balance|num }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4">Current stock</td>
+            <td class="num"><strong>{{ item.current_stock|num }} {{ item.current_stock|unit_name(item.unit) }}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">
+      <p>No movements yet. Receive stock or record an adjustment to start the history.</p>
+      <a class="btn btn-primary" href="/stock-in?item={{ item.id }}">Receive stock</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <aside class="detail-side">
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h2>Adjust stock</h2>
+          <p>Correct the count with an audit trail</p>
+        </div>
+      </header>
+      <form method="post" action="/items/{{ item.id }}/adjust" class="form-body form-body-compact">
+        <div class="field">
+          <label for="quantity_change">Quantity change <span class="required">*</span></label>
+          <input id="quantity_change" name="quantity_change" type="number" step="1" placeholder="e.g. 2 or -3" required>
+          <p class="hint">Use a positive number to add stock, negative to remove.</p>
+        </div>
+        <div class="field">
+          <label for="reason">Reason <span class="required">*</span></label>
+          <input id="reason" name="reason" type="text" maxlength="120" placeholder="e.g. Physical count correction" required>
+        </div>
+        <div class="field">
+          <label for="adjust-date">Date</label>
+          <input id="adjust-date" name="date" type="date" value="{{ today }}" required>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Record adjustment</button>
+      </form>
+    </section>
+
+    <section class="panel panel-tinted">
+      <h2 class="aside-title">Item details</h2>
+      <dl class="detail-list">
+        <div><dt>Category</dt><dd>{{ item.category }}</dd></div>
+        <div><dt>Unit</dt><dd>{{ item.unit }}</dd></div>
+        <div><dt>Reorder level</dt><dd>{{ item.reorder_level|num }} {{ item.reorder_level|unit_name(item.unit) }}</dd></div>
+        {% if item.metres_per_drum %}<div><dt>Metres per drum</dt><dd>{{ item.metres_per_drum|num }} m</dd></div>{% endif %}
+        <div><dt>Serial tracking</dt><dd>{{ 'Optional' if item.tracks_serial else 'Not tracked' }}</dd></div>
+        <div><dt>Total issued</dt><dd>{{ totals.issued|num }} {{ totals.issued|unit_name(item.unit) }}</dd></div>
+      </dl>
+      <div class="aside-actions">
+        <a class="btn btn-secondary btn-block" href="/issues/new">Issue this to someone</a>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

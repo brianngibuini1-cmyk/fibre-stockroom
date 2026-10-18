@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stock_badge %}
+
+{% block actions %}
+<a class="btn btn-secondary" href="/stock-in">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11"/><path d="m7.5 9.5 4.5 4.5 4.5-4.5"/><path d="M4 16.5v2A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-2"/></svg>
+  Receive
+</a>
+<a class="btn btn-primary" href="/issues/new">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14V3"/><path d="M7.5 7.5 12 3l4.5 4.5"/><path d="M4 16.5v2A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-2"/></svg>
+  Issue stock
+</a>
+{% endblock %}
+
+{% block content %}
+<section class="stats-grid" aria-label="Inventory at a glance">
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg>
+      </span>
+      <span class="stat-trend">{{ stats.people }} active {{ 'person' if stats.people == 1 else 'people' }}</span>
+    </div>
+    <p class="stat-label">Materials tracked</p>
+    <p class="stat-value">{{ stats.item_count|num }}</p>
+    <p class="stat-meta">Across {{ stats.categories }} fibre categories</p>
+  </article>
+
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3"/></svg>
+      </span>
+      <span class="stat-trend">Cable stock</span>
+    </div>
+    <p class="stat-label">Cable drums on hand</p>
+    <p class="stat-value">{{ stats.drums|num }}</p>
+    <p class="stat-meta">{{ stats.cable_types }} cable types: drop, 12/24/48-core ADSS</p>
+  </article>
+
+  <article class="stat-card {{ 'stat-card-warn' if stats.low }}">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 21 20H3L12 3.5Z"/><path d="M12 9.5v4.5"/><path d="M12 17.2h.01"/></svg>
+      </span>
+      <a class="stat-trend stat-link" href="/items">Review</a>
+    </div>
+    <p class="stat-label">Low-stock warnings</p>
+    <p class="stat-value">{{ stats.low|num }}</p>
+    <p class="stat-meta">At or below their reorder level</p>
+  </article>
+
+  <article class="stat-card">
+    <div class="stat-top">
+      <span class="stat-icon stat-icon-plum">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14V3"/><path d="M7.5 7.5 12 3l4.5 4.5"/><path d="M4 16.5v2A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-2"/></svg>
+      </span>
+      <a class="stat-trend stat-link" href="/returns">{{ stats.open_issues }} open</a>
+    </div>
+    <p class="stat-label">Units checked out</p>
+    <p class="stat-value">{{ stats.outstanding|num }}</p>
+    <p class="stat-meta">Still waiting to be returned</p>
+  </article>
+</section>
+
+<div class="dashboard-grid">
+  <section class="panel">
+    <header class="panel-head">
+      <div>
+        <h2>Stock levels</h2>
+        <p>Current quantities and reorder thresholds</p>
+      </div>
+      <a class="text-link" href="/items">View all items <span aria-hidden="true">&rarr;</span></a>
+    </header>
+
+    {% if items %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Category</th>
+            <th class="num">On hand</th>
+            <th class="num">Reorder at</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items[:10] %}
+          <tr>
+            <td class="cell-item">
+              <a href="/items/{{ item.id }}">{{ item.name }}</a>
+              <div class="stock-meter" aria-hidden="true">
+                <span class="meter-fill {{ 'meter-out' if item.current_stock <= 0 else ('meter-low' if item.current_stock <= item.reorder_level else '') }}" style="width: {{ item.stock_pct }}%"></span>
+              </div>
+            </td>
+            <td><span class="muted">{{ item.category }}</span></td>
+            <td class="num">
+              <strong>{{ item.current_stock|num }}</strong> <span class="unit">{{ item.current_stock|unit_name(item.unit) }}</span>
+              {% if item.metres_per_drum %}
+              <span class="cell-sub">≈ {{ (item.current_stock * item.metres_per_drum)|num }} m</span>
+              {% endif %}
+            </td>
+            <td class="num muted">{{ item.reorder_level|num }}</td>
+            <td>{{ stock_badge(item) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">
+      <p>No items yet. Add your first catalogue item to start tracking stock.</p>
+      <a class="btn btn-primary" href="/items/new">Add item</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <div class="dashboard-side">
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h2>Low-stock alerts</h2>
+          <p>Replenish these next</p>
+        </div>
+        <span class="pill pill-warn">{{ stats.low }}</span>
+      </header>
+
+      {% if stats.low %}
+      <ul class="alert-list">
+        {% for item in items if item.current_stock <= item.reorder_level %}
+        <li class="alert-item">
+          <span class="alert-mark {{ 'is-out' if item.current_stock <= 0 }}" aria-hidden="true">{{ item.current_stock|num }}</span>
+          <div class="alert-copy">
+            <a href="/items/{{ item.id }}">{{ item.name }}</a>
+            <p>{{ item.current_stock|unit_label(item.unit) }} on hand{% if item.metres_per_drum %} · ≈ {{ (item.current_stock * item.metres_per_drum)|num }} m{% endif %} · reorder at {{ item.reorder_level }}</p>
+          </div>
+          <a class="btn btn-tiny btn-secondary" href="/stock-in?item={{ item.id }}">Receive</a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty empty-compact">
+        <span class="empty-icon empty-icon-good" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+        </span>
+        <p>Everything is above its reorder level. Nice.</p>
+      </div>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h2>Recent activity</h2>
+          <p>Latest stock movements</p>
+        </div>
+        <a class="text-link" href="/reports">Reports</a>
+      </header>
+
+      {% if recent %}
+      <ul class="activity-list">
+        {% for entry in recent %}
+        <li class="activity-item">
+          <span class="activity-icon activity-{{ entry.kind }}" aria-hidden="true">
+            {% if entry.kind == 'in' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"/><path d="m8 10 4 4 4-4"/></svg>
+            {% elif entry.kind == 'out' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14V4"/><path d="m8 8 4-4 4 4"/></svg>
+            {% elif entry.kind == 'return' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h11a4.5 4.5 0 0 1 0 9H9"/><path d="m7.5 5.5-3.5 3.5 3.5 3.5"/></svg>
+            {% else %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10"/><path d="M18 7h2"/><circle cx="16" cy="7" r="2"/><path d="M4 17h2"/><path d="M10 17h10"/><circle cx="8" cy="17" r="2"/></svg>
+            {% endif %}
+          </span>
+          <div class="activity-copy">
+            <p>
+              {% if entry.kind == 'in' %}
+                Received <strong>{{ entry.qty|unit_label(entry.unit) }}</strong> of {{ entry.item }}
+              {% elif entry.kind == 'out' %}
+                Issued <strong>{{ (-entry.qty)|unit_label(entry.unit) }}</strong> of {{ entry.item }}
+              {% elif entry.kind == 'return' %}
+                Returned <strong>{{ entry.qty|unit_label(entry.unit) }}</strong> of {{ entry.item }}
+              {% else %}
+                Adjusted <strong>{{ entry.qty|signed }} {{ entry.unit }}</strong> of {{ entry.item }}
+              {% endif %}
+            </p>
+            <p class="activity-meta">{{ entry.detail }} &middot; {{ entry.date|datefmt('%d %b') }}</p>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty empty-compact"><p>No stock movement recorded yet.</p></div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

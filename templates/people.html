@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="people-layout">
+  <section class="panel">
+    <header class="panel-head">
+      <div>
+        <h2>People</h2>
+        <p>{{ active_count }} active &middot; {{ inactive_count }} inactive</p>
+      </div>
+      <span class="pill">{{ people|length }} total</span>
+    </header>
+
+    {% if people %}
+    <div class="people-list">
+      {% for person in people %}
+      <article class="person-card {{ 'is-inactive' if not person.active }}" id="person-{{ person.id }}">
+        <div class="person-card-top">
+          <span class="avatar avatar-lg">{{ person.name|initials }}</span>
+          <div class="person-identity">
+            <p class="person-name">{{ person.name }}</p>
+            <p class="person-phone">{{ person.phone or 'No phone number' }}</p>
+          </div>
+          <div class="person-badges">
+            <span class="badge {{ 'badge-good' if person.active else 'badge-neutral' }}">
+              <span class="dot"></span>{{ 'Active' if person.active else 'Inactive' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="person-stats">
+          <div>
+            <strong class="{{ 'delta-down' if person.outstanding }}">{{ person.outstanding|num }}</strong>
+            <span>units out</span>
+          </div>
+          <div>
+            <strong>{{ person.open_issue_count|num }}</strong>
+            <span>open issue{{ '' if person.open_issue_count == 1 else 's' }}</span>
+          </div>
+          <div>
+            <strong>{{ person.issue_count|num }}</strong>
+            <span>total issued</span>
+          </div>
+        </div>
+
+        <div class="person-holding">
+          {% if person.outstanding_items %}
+          <p class="holding-label">Currently holding</p>
+          <ul class="holding-list">
+            {% for holding in person.outstanding_items %}
+            <li>
+              <span>{{ holding.item_name }}</span>
+              <strong>{{ holding.quantity|num }} <small>{{ holding.unit }}</small></strong>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="holding-empty">No stock checked out.</p>
+          {% endif %}
+        </div>
+
+        <div class="person-actions">
+          {% if person.active %}
+          <a class="btn btn-secondary btn-sm" href="/issues/new?person={{ person.id }}">Issue stock</a>
+          {% endif %}
+          <form method="post" action="/people/{{ person.id }}/toggle">
+            <button class="btn btn-sm {{ 'btn-ghost' if person.active else 'btn-secondary' }}" type="submit">
+              {{ 'Deactivate' if person.active else 'Reactivate' }}
+            </button>
+          </form>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.2 2.5-5 5.5-5s5.5 1.8 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.8"/><path d="M17.5 14.6c1.9.5 3 2.1 3 4.1"/></svg>
+      </span>
+      <h3>No people yet</h3>
+      <p>Add someone so you can start issuing stock to them.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <aside class="people-aside">
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <h2>Add a person</h2>
+          <p>Anyone who can receive stock</p>
+        </div>
+      </header>
+      <form method="post" action="/people" class="form-body form-body-compact">
+        <div class="field">
+          <label for="person-name">Full name <span class="required">*</span></label>
+          <input id="person-name" name="name" type="text" maxlength="100" placeholder="e.g. Amina Yusuf" required>
+        </div>
+        <div class="field">
+          <label for="person-phone">Phone</label>
+          <input id="person-phone" name="phone" type="tel" maxlength="40" placeholder="e.g. +254 712 000 111">
+          <p class="hint">Optional, but useful for chasing returns.</p>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Add person</button>
+      </form>
+    </section>
+
+    <section class="panel panel-tinted">
+      <h2 class="aside-title">Deactivating</h2>
+      <p class="aside-copy">Inactive people keep their history and outstanding items, but cannot be selected for new issues. You can reactivate them at any time.</p>
+    </section>
+  </aside>
+</div>
+{% endblock %}

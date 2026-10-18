@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block actions %}
+<a class="btn btn-secondary" href="/people">Issued to</a>
+<a class="btn btn-secondary" href="/returns">Record a return</a>
+{% endblock %}
+
+{% block content %}
+<div class="form-layout">
+  <section class="panel">
+    <header class="panel-head">
+      <div>
+        <h2>New issue</h2>
+        <p>Stock is deducted when you save this issue.</p>
+      </div>
+      <span class="badge badge-info">Check-out</span>
+    </header>
+
+    {% if people %}
+    <form method="post" action="/issues/new" class="form-body" id="issue-form">
+      <div class="form-grid">
+        <div class="field">
+          <label for="issued_to_id">Issued to <span class="required">*</span></label>
+          <select id="issued_to_id" name="issued_to_id" required>
+            <option value="" disabled {{ 'selected' if not values.issued_to_id }}>Choose a person</option>
+            {% for person in people %}
+            <option value="{{ person.id }}" {{ 'selected' if values.issued_to_id|string == person.id|string }}>
+              {{ person.name }}{% if person.phone %} · {{ person.phone }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="issue-date">Issue date</label>
+          <input id="issue-date" name="date" type="date" value="{{ values.date }}" required>
+        </div>
+      </div>
+
+      <div class="items-field">
+        <div class="items-field-head">
+          <div>
+            <p class="field-title">Items and quantities <span class="required">*</span></p>
+            <p class="hint">Add one line per item. Cable metres and serial numbers are optional.</p>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="add-issue-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            Add item
+          </button>
+        </div>
+
+        <div class="issue-rows" id="issue-rows">
+          {% for row in rows %}
+          <div class="issue-row">
+            <div class="issue-item">
+              <label class="visually-hidden" for="item_id_{{ loop.index }}">Item</label>
+              <select id="item_id_{{ loop.index }}" name="item_id">
+                <option value="">Choose an item</option>
+                {% for item in items %}
+                <option value="{{ item.id }}"
+                        data-stock="{{ item.current_stock }}"
+                        data-unit="{{ item.unit }}"
+                        data-metres-per-drum="{{ item.metres_per_drum }}"
+                        data-track-serial="{{ item.tracks_serial }}"
+                        {{ 'selected' if row.item_id|string == item.id|string }}>
+                  {{ item.name }} — {{ item.current_stock|unit_label(item.unit) }} in stock
+                </option>
+                {% endfor %}
+              </select>
+              <span class="stock-hint" data-stock-hint>Select an item to see availability</span>
+            </div>
+            <div class="issue-qty">
+              <label class="visually-hidden" for="quantity_{{ loop.index }}">Quantity</label>
+              <input id="quantity_{{ loop.index }}" name="quantity" type="number" min="1" step="1" value="{{ row.quantity or '1' }}" inputmode="numeric">
+            </div>
+            <button type="button" class="icon-btn row-remove" aria-label="Remove this item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+            <div class="issue-extra" data-issue-extra hidden>
+              <label class="issue-mini-field" data-metres-field hidden>
+                <span>Metres <em>optional</em></span>
+                <input name="metres" type="number" min="0" step="1" value="{{ row.metres or '' }}" placeholder="e.g. 2000" inputmode="numeric">
+              </label>
+              <label class="issue-mini-field" data-serials-field hidden>
+                <span>Serial no(s) <em>optional</em></span>
+                <input name="serials" type="text" maxlength="500" value="{{ row.serials or '' }}" placeholder="Comma-separated">
+              </label>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <p class="form-alert" id="issue-form-error" hidden></p>
+      </div>
+
+      <div class="form-actions">
+        <a class="btn btn-secondary" href="/">Cancel</a>
+        <button class="btn btn-primary" type="submit">
+          Save issue &amp; deduct stock
+        </button>
+      </div>
+    </form>
+
+    <template id="issue-row-template">
+      <div class="issue-row">
+        <div class="issue-item">
+          <label class="visually-hidden">Item</label>
+          <select name="item_id">
+            <option value="">Choose an item</option>
+            {% for item in items %}
+            <option value="{{ item.id }}"
+                    data-stock="{{ item.current_stock }}"
+                    data-unit="{{ item.unit }}"
+                    data-metres-per-drum="{{ item.metres_per_drum }}"
+                    data-track-serial="{{ item.tracks_serial }}">
+              {{ item.name }} — {{ item.current_stock|unit_label(item.unit) }} in stock
+            </option>
+            {% endfor %}
+          </select>
+          <span class="stock-hint" data-stock-hint>Select an item to see availability</span>
+        </div>
+        <div class="issue-qty">
+          <label class="visually-hidden">Quantity</label>
+          <input name="quantity" type="number" min="1" step="1" value="1" inputmode="numeric">
+        </div>
+        <button type="button" class="icon-btn row-remove" aria-label="Remove this item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+        <div class="issue-extra" data-issue-extra hidden>
+          <label class="issue-mini-field" data-metres-field hidden>
+            <span>Metres <em>optional</em></span>
+            <input name="metres" type="number" min="0" step="1" placeholder="e.g. 2000" inputmode="numeric">
+          </label>
+          <label class="issue-mini-field" data-serials-field hidden>
+            <span>Serial no(s) <em>optional</em></span>
+            <input name="serials" type="text" maxlength="500" placeholder="Comma-separated">
+          </label>
+        </div>
+      </div>
+    </template>
+    {% else %}
+    <div class="empty">
+      <h3>No active people yet</h3>
+      <p>Add someone to the “Issued to” list before issuing stock.</p>
+      <a class="btn btn-primary" href="/people">Add a person</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <aside class="form-aside">
+    <section class="panel panel-tinted">
+      <h2 class="aside-title">What happens next</h2>
+      <ol class="step-list">
+        <li><span>1</span><p>Stock is <strong>deducted</strong> from every item in this issue.</p></li>
+        <li><span>2</span><p>The issue stays open while items are with the person.</p></li>
+        <li><span>3</span><p>Record returns to add quantities back to stock.</p></li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <header class="panel-head panel-head-tight">
+        <div>
+          <h2>Active people</h2>
+          <p>{{ people|length }} available to receive stock</p>
+        </div>
+        <a class="text-link" href="/people">Manage</a>
+      </header>
+      {% if people %}
+      <ul class="person-mini-list">
+        {% for person in people %}
+        <li>
+          <span class="avatar avatar-sm">{{ person.name|initials }}</span>
+          <span class="person-mini-copy"><strong>{{ person.name }}</strong><small>{{ person.phone or 'No phone' }}</small></span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted">Nobody is active right now.</p>
+      {% endif %}
+    </section>
+  </aside>
+</div>
+{% endblock %}

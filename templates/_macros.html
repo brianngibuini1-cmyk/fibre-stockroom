@@ -1,0 +1,21 @@
+{% macro stock_badge(item) -%}
+  {%- if item.current_stock <= 0 -%}
+    <span class="badge badge-bad"><span class="dot"></span>Out of stock</span>
+  {%- elif item.current_stock <= item.reorder_level -%}
+    <span class="badge badge-warn"><span class="dot"></span>Low stock</span>
+  {%- else -%}
+    <span class="badge badge-good"><span class="dot"></span>In stock</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro direction_badge(kind) -%}
+  {%- if kind == 'in' -%}
+    <span class="badge badge-good">Stock in</span>
+  {%- elif kind == 'out' -%}
+    <span class="badge badge-info">Issued</span>
+  {%- elif kind == 'return' -%}
+    <span class="badge badge-neutral">Returned</span>
+  {%- else -%}
+    <span class="badge badge-warn">Adjustment</span>
+  {%- endif -%}
+{%- endmacro %}

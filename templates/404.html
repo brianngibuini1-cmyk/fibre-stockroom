@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel not-found">
+  <p class="not-found-code">404</p>
+  <h2>That record is not here</h2>
+  <p>{{ message or 'The page you were looking for could not be found.' }}</p>
+  <div class="not-found-actions">
+    <a class="btn btn-secondary" href="/">Dashboard</a>
+    <a class="btn btn-primary" href="/items">Browse items</a>
+  </div>
+</section>
+{% endblock %}
